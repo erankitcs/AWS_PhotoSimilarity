@@ -1,0 +1,169 @@
+service: photosimilarity-neptune
+
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+provider:
+  name: aws
+  stage: dev
+  region: us-east-1
+  profile: pythonAutomation
+
+resources:
+  Resources:
+    NeptuneDBCluster:
+      Type: "AWS::Neptune::DBCluster"
+      Properties:
+        DBSubnetGroupName:
+          Ref: NeptuneDBSubnetGroup
+        VpcSecurityGroupIds:
+          - Fn::GetAtt:
+            - "NeptuneVPC"
+            - "DefaultSecurityGroup"
+          - Fn::GetAtt:
+            - "NeptuneServiceSecurityGroup"
+            - "GroupId"
+        Port: 8182
+        IamAuthEnabled: false
+      DependsOn:
+        - NeptuneDBSubnetGroup
+    NeptuneDBInstance:
+      Type: "AWS::Neptune::DBInstance"
+      Properties:
+        DBClusterIdentifier:
+          Ref: "NeptuneDBCluster"
+        DBInstanceClass: "db.r4.xlarge"
+      DependsOn:
+        - "NeptuneDBCluster"
+    NeptuneVPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        Tags:
+          - Key: Name
+            Value: neptune-vpc
+    Subnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: NeptuneVPC
+        CidrBlock: 10.0.1.0/24
+        AvailabilityZone:
+          Fn::Select:
+            - 0
+            - Fn::GetAZs: ""
+        Tags:
+          - Key: Name
+            Value: neptune-subnet1
+    Subnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: NeptuneVPC
+        CidrBlock: 10.0.2.0/24
+        AvailabilityZone:
+          Fn::Select:
+            - 1
+            - Fn::GetAZs: ""
+        Tags:
+          - Key: Name
+            Value: neptune-subnet2
+    NeptuneDBSubnetGroup:
+      Type: "AWS::Neptune::DBSubnetGroup"
+      Properties:
+        DBSubnetGroupDescription: "Photosimilarity Neptune DB subnet group"
+        SubnetIds:
+          -
+            Ref: Subnet1
+          -
+            Ref: Subnet2
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: neptune-igw
+    AttachGateway:
+      Type: "AWS::EC2::VPCGatewayAttachment"
+      Properties:
+        InternetGatewayId:
+          Ref: InternetGateway
+        VpcId:
+          Ref: NeptuneVPC
+    ElasticIP:
+      Type: AWS::EC2::EIP
+      Properties:
+        Domain: vpc
+    SubnetRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId:
+          Ref: NeptuneVPC
+        Tags:
+          - Key: Name
+            Value: rt-to-igw
+    DefaultPublicRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: SubnetRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: InternetGateway
+    Subnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId:
+          Ref: SubnetRouteTable
+        SubnetId:
+          Ref: Subnet1
+    Subnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId:
+          Ref: SubnetRouteTable
+        SubnetId:
+          Ref: Subnet2
+    NeptuneServiceSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: neptune-service-sg
+        GroupDescription: Allow https to client host
+        VpcId:
+          Ref: NeptuneVPC
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: '443'
+            ToPort: '443'
+            CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: '8182'
+            ToPort: '8182'
+            CidrIp: 0.0.0.0/0
+        Tags:
+          - Key: Name
+            Value: Neptune service security group
+  Outputs:
+    Subnet1:
+      Description: Subnet ID 1
+      Value:
+        Ref: Subnet1
+    Subnet2:
+      Description: Subnet ID 2
+      Value:
+        Ref: Subnet2
+    SecurityGroup:
+      Description: Security group for the lambda service
+      Value:
+        Ref: NeptuneServiceSecurityGroup
+    DBClusterEndpoint:
+      Description: Master Endpoint for Neptune Cluster
+      Value:
+        Fn::GetAtt:
+          - "NeptuneDBCluster"
+          - "Endpoint"
+    DBClusterResourceId:
+      Description: Unique identifier needed for IAM policies
+      Value:
+        Fn::GetAtt:
+          - "NeptuneDBCluster"
+          - "ClusterResourceId"
