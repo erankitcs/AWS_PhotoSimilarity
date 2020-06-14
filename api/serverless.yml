@@ -1,0 +1,49 @@
+service: photosimilarity-api
+
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+plugins:
+  - serverless-webpack
+  - serverless-pseudo-parameters
+  - serverless-plugin-vpc-eni-cleanup
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: dev
+  region: us-east-1
+  profile: pythonAutomation
+  vpc:
+    securityGroupIds:
+      - ${cf:${self:custom.neptuneStackName}.SecurityGroup}
+    subnetIds:
+      - ${cf:${self:custom.neptuneStackName}.Subnet1}
+      - ${cf:${self:custom.neptuneStackName}.Subnet2}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - neptune-db:*
+      Resource:
+        - "arn:aws:neptune-db:${self:provider.region}:#{AWS::AccountId}:${cf:${self:custom.neptuneStackName}.DBClusterResourceId}/*"
+    - Effect: Allow # for serverless-plugin-vpc-eni-cleanup to prevent long stack removal time
+      Action:
+        - ec2:DeleteNetworkInterface
+        - ec2:DetachNetworkInterface
+        - ec2:DescribeNetworkInterfaces
+      Resource:
+        - "*"
+custom:
+  webpackIncludeModules:
+    forceInclude:
+      - gremlin
+  neptuneStackName: photosimilarity-neptune-dev
+
+functions:
+  query:
+    handler: query.query
+    timeout: 20
+    environment:
+      CLUSTER_ENDPOINT: ${cf:${self:custom.neptuneStackName}.DBClusterEndpoint}
+    events:
+      - http:
+          path: query
+          method: get
