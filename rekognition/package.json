@@ -1,0 +1,24 @@
+{
+  "name": "rekognition-app",
+  "version": "1.0.0",
+  "description": "Rekognition App for analysing image and creating csv files for neptune.",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape './**/*.test.js' | tap-spec"
+  },
+  "author": "Ankit Singh",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.401.0",
+    "json-2-csv": "^3.3.0"
+  },
+  "devDependencies": {
+    "dotenv": "^8.0.0",
+    "serverless-s3-remover": "^0.6.0",
+    "serverless-webpack": "^5.2.0",
+    "short-uuid": "^3.1.1",
+    "tap-spec": "^5.0.0",
+    "tape": "^4.10.0",
+    "webpack": "^4.29.3"
+  }
+}
