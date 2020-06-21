@@ -45,3 +45,7 @@ This project is created to identify and provide similar faces recommendation bas
 ## Architecture Diagram:
 
 ![Screenshot](ArchitectureDiagram.jpeg)
+
+## Application:
+
+![Screenshot](PhotoSimilarity.gif)
