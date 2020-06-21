@@ -142,6 +142,54 @@ resources:
         Tags:
           - Key: Name
             Value: Neptune service security group
+    NeptuneLoadFromS3Role:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - rds.amazonaws.com
+              Action:
+                - 'sts:AssumeRole'
+        Path: /
+    NeptuneLoadFromS3Policy:
+      Type: 'AWS::IAM::Policy'
+      Properties:
+        PolicyName: NeptuneLoadFromS3Policy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:Get*'
+                - 's3:List*'
+              Resource: '*'
+        Roles:
+          - !Ref NeptuneLoadFromS3Role
+    VPCS3Endpoint:
+      Type: 'AWS::EC2::VPCEndpoint'
+      DependsOn:
+        - NeptuneVPC
+      Properties:
+        RouteTableIds:
+          - !Ref SubnetRouteTable
+        ServiceName: !Join
+          - ''
+          - - com.amazonaws.
+            - !Ref 'AWS::Region'
+            - .s3
+        VpcId: !Ref NeptuneVPC
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action:
+                - 's3:*'
+              Resource:
+                - '*'
   Outputs:
     Subnet1:
       Description: Subnet ID 1
@@ -167,3 +215,9 @@ resources:
         Fn::GetAtt:
           - "NeptuneDBCluster"
           - "ClusterResourceId"
+    NeptuneLoadFromS3RoleArn:
+      Description: S3 loader role for neptune to assume
+      Value:
+        Fn::GetAtt:
+          - "NeptuneLoadFromS3Role"
+          - "Arn"

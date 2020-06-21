@@ -4,7 +4,6 @@ const { promisify } = require('util')
 const path = require('path');
 const shortUuid = require('short-uuid');
 
-
 const translator = shortUuid('abcdefghijklmnopqrstuvwxyz0123456789');
 const envPath = path.resolve(__dirname, '../../.env');
 
@@ -17,9 +16,17 @@ const updateBucketNameInEnvFile = (bucketName) => {
 }
 
 const generateBucketName = () => {
-    const newBucketName = `ankitphotos-${translator.new()}`
+    const newBucketName = `mbudmrekphotos-${translator.new()}`
     return updateBucketNameInEnvFile(newBucketName)
         .then((newEnv) => newEnv.S3_BUCKET);
+}
+
+function escapeNewlines (str) {
+  return str.replace(/\n/g, '\\n')
+}
+
+function format (key, value) {
+  return `${key}=${escapeNewlines(value)}`
 }
 
 async function updateDotenv (env) {

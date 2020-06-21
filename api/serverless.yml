@@ -35,7 +35,9 @@ custom:
   webpackIncludeModules:
     forceInclude:
       - gremlin
+      - isomorphic-fetch
   neptuneStackName: photosimilarity-neptune-dev
+  rekognitionStackName: photosimilarity-rekognition-data-dev
 
 functions:
   query:
@@ -47,3 +49,21 @@ functions:
       - http:
           path: query
           method: get
+          cors: true
+          request:
+             parameters:
+                querystrings:
+                    imageId: true
+                    threshold: true
+                    hops: true
+  loader:
+    handler: loader.load
+    timeout: 20
+    environment:
+      ROLE_ARN: ${cf:${self:custom.neptuneStackName}.NeptuneLoadFromS3RoleArn}
+      LOADER_S3_BUCKET: ${cf:${self:custom.rekognitionStackName}.S3Bucket}
+      CLUSTER_ENDPOINT: ${cf:${self:custom.neptuneStackName}.DBClusterEndpoint}
+    events:
+      - http:
+          path: loader
+          method: post

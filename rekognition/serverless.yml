@@ -19,6 +19,7 @@ provider:
   name: aws
   runtime: nodejs10.x
   region: us-east-1
+  profile: pythonAutomation
   environment:
     S3_BUCKET: ${file(./serverlessEnv.js):config.S3_BUCKET}
     REKOGNITION_COLLECTION: neptune-photos
@@ -31,6 +32,11 @@ provider:
         - "s3:ListBucket"
       Resource:
         - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
+    - Effect: "Allow"
+      Action:
+        - "s3:ListBucket"
+      Resource:
+        - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}"
     - Effect: "Allow"
       Action:
         - "rekognition:IndexFaces"
@@ -62,6 +68,13 @@ functions:
           event: s3:ObjectCreated:*
           rules:
             - suffix: .jpg
+  list:
+    handler: list.listPhotos
+    events:
+      - http:
+          path: list
+          method: get
+          cors: true
 resources:
   Outputs:
     S3Bucket:
